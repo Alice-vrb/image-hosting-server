@@ -1,0 +1,22 @@
+# PyCharm settings
+.idea/
+
+# Git-files
+.git
+../../../PycharmProjects/image-hosting/.gitignore
+
+# Docker configs
+docker-compose.yaml
+compose.yaml
+nginx.conf
+Dockerfile
+.dockerignore
+
+# Volumes & logs
+images/
+logs/
+*.log
+
+README.md
+
+.venv
