@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', function (event) {
         if (event.key === 'F5' || event.key === 'Escape') {
             event.preventDefault();
-            window.location.href = 'upload.html';
+            window.location.href = './upload';
         }
     });
     const fileListWrapper = document.getElementById('file-list-wrapper');
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const imagesTab = document.getElementById('images-tab-btn');
         const storedFiles = JSON.parse(localStorage.getItem('uploadedImages')) || [];
 
-        const isImagesPage = window.location.pathname.includes('images.html');
+        const isImagesPage = window.location.pathname.includes('/images');
 
         uploadTab.classList.remove('upload__tab--active');
         imagesTab.classList.remove('upload__tab--active');
@@ -51,12 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 fileItem.className = 'file-list-item';
                 fileItem.innerHTML = `
                     <div class="file-col file-col-name">
-                        <span class="file-icon"><img src="../image-uploader/img/icon/Group.png" alt="file icon"></span>
+                        <span class="file-icon"><img src="../static/img/icon/Group.png" alt="file icon"></span>
                         <span class="file-name">${fileData.name}</span>
                     </div>
                     <div class="file-col file-col-url">https://sharefile.xyz/${fileData.name}</div>
                     <div class="file-col file-col-delete">
-                        <button class="delete-btn" data-index="${index}"><img src="../image-uploader/img/icon/delete.png" alt="delete icon"></button>
+                        <button class="delete-btn" data-index="${index}"><img src="../static/img/icon/delete.png" alt="delete icon"></button>
                     </div>
                 `;
                 list.appendChild(fileItem);
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (uploadRedirectButton) {
         uploadRedirectButton.addEventListener('click', () => {
-            window.location.href = 'upload.html';
+            window.location.href = './upload';
         });
     }
 

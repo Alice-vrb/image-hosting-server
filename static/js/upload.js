@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
             event.preventDefault();
 
             sessionStorage.removeItem('pageWasVisited');
-            window.location.href = '../index.html';
+            window.location.href = '../';
         }
     });
 });
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const imagesTab = document.getElementById('images-tab-btn');
         const storedFiles = JSON.parse(localStorage.getItem('uploadedImages')) || [];
 
-        const isImagesPage = window.location.pathname.includes('images.html');
+        const isImagesPage = window.location.pathname.includes('/images');
 
         uploadTab.classList.remove('upload__tab--active');
         imagesTab.classList.remove('upload__tab--active');
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const handleAndStoreFiles = (files) => {
+    const handleAndStoreFiles = async (files) => {
         if (!files || files.length === 0) {
             return;
         }
@@ -43,6 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
         let filesAdded = false;
         let lastFileName = '';
+
+        const formData = new FormData();
+
+        // Массив только названий файлов
+        const fileNames = [];
 
         for (const file of files) {
             if (!allowedTypes.includes(file.type) || file.size > MAX_SIZE_BYTES) {
@@ -57,10 +62,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateTabStyles();
             };
             reader.readAsDataURL(file);
+            fileNames.push(file.name);
+            formData.append('files', file);
+
             filesAdded = true;
             lastFileName = file.name;
         }
+        formData.append('names', JSON.stringify(fileNames));
+        console.log('Names JSON:', formData);
+        try {
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
 
+            if (!response.ok) {
+                console.error('Upload failed:', response.status);
+                return;
+            }
+
+            console.log('Files uploaded successfully');
+
+        } catch (error) {
+            console.error('Upload error:', error);
+        }
         if (filesAdded) {
             if (currentUploadInput) {
                 currentUploadInput.value = `https://sharefile.xyz/${lastFileName}`;
@@ -88,12 +113,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (imagesButton) {
         imagesButton.addEventListener('click', () => {
-            window.location.href = 'images.html';
+            window.location.href = './images';
         });
     }
 
-    fileUpload.addEventListener('change', (event) => {
-        handleAndStoreFiles(event.target.files);
+    fileUpload.addEventListener('change', async (event) => {
+        await handleAndStoreFiles(event.target.files);
         event.target.value = '';
     });
 
@@ -104,8 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    dropzone.addEventListener('drop', (event) => {
-        handleAndStoreFiles(event.dataTransfer.files);
+    dropzone.addEventListener('drop', async (event) => {
+        await handleAndStoreFiles(event.dataTransfer.files);
     });
 
     updateTabStyles();
