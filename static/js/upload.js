@@ -78,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 console.error('Upload failed:', response.status);
-                return;
             }
 
             console.log('Files uploaded successfully');
