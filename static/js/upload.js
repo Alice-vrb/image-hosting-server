@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateTabStyles = () => {
         const uploadTab = document.getElementById('upload-tab-btn');
         const imagesTab = document.getElementById('images-tab-btn');
-        const storedFiles = JSON.parse(localStorage.getItem('uploadedImages')) || [];
 
         const isImagesPage = window.location.pathname.includes('/images');
 
@@ -42,11 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const MAX_SIZE_MB = 5;
         const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
         let filesAdded = false;
-        let lastFileName = '';
 
         const formData = new FormData();
 
-        // Массив только названий файлов
         const fileNames = [];
 
         for (const file of files) {
@@ -54,19 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 continue;
             }
 
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const fileData = { name: file.name, url: event.target.result };
-                storedFiles.push(fileData);
-                localStorage.setItem('uploadedImages', JSON.stringify(storedFiles));
-                updateTabStyles();
-            };
-            reader.readAsDataURL(file);
             fileNames.push(file.name);
             formData.append('files', file);
 
             filesAdded = true;
-            lastFileName = file.name;
         }
         formData.append('names', JSON.stringify(fileNames));
         console.log('Names JSON:', formData);
@@ -78,18 +66,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 console.error('Upload failed:', response.status);
+                return;
             }
 
-            console.log('Files uploaded successfully');
+            const result = await response.json();
+
+            storedFiles.push({ name: result.name, url: result.url });
+            localStorage.setItem('uploadedImages', JSON.stringify(storedFiles));
+            updateTabStyles();
+
+            if (currentUploadInput) {
+                currentUploadInput.value = result.url;
+            }
+            alert("Files selected successfully! Go to the 'Images' tab to view them.");
 
         } catch (error) {
             console.error('Upload error:', error);
-        }
-        if (filesAdded) {
-            if (currentUploadInput) {
-                currentUploadInput.value = `https://sharefile.xyz/${lastFileName}`;
-            }
-            alert("Files selected successfully! Go to the 'Images' tab to view them.");
         }
     };
 
@@ -133,4 +125,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     updateTabStyles();
-}); 
+});
