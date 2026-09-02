@@ -37,9 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const storedFiles = JSON.parse(localStorage.getItem('uploadedImages')) || [];
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        const MAX_SIZE_MB = 5;
-        const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
         let filesAdded = false;
 
         const formData = new FormData();
@@ -47,10 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileNames = [];
 
         for (const file of files) {
-            if (!allowedTypes.includes(file.type) || file.size > MAX_SIZE_BYTES) {
-                continue;
-            }
-
             fileNames.push(file.name);
             formData.append('files', file);
 
@@ -65,7 +58,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                console.error('Upload failed:', response.status);
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Upload failed:', response.status, errorData.error);
+                alert(errorData.error || 'Upload failed.');
                 return;
             }
 

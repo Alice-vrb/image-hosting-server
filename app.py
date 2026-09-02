@@ -39,6 +39,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == '/upload':
             data, upload_name = self.extract_file_data()
+
+            is_valid, error_message = self.validate_file(data, upload_name)
+            if not is_valid:
+                response = json.dumps({'error': error_message}).encode()
+                self.send_response(400)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(response)
+                return
+
             filename = f"{uuid.uuid4().hex}.{upload_name.split('.')[-1]}"
 
             os.makedirs(os.path.dirname(f"images/{filename}"), exist_ok=True)
@@ -119,6 +129,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
         ).group(1).decode()
 
         return data, upload_name
+
+    ALLOWED_EXTENSIONS = ('jpg', 'jpeg', 'png', 'gif')
+    MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+
+    def validate_file(self, data, filename):
+        extension = filename.split('.')[-1].lower() if '.' in filename else ''
+
+        if extension not in self.ALLOWED_EXTENSIONS:
+            return False, f"Invalid file extension: .{extension}"
+
+        if len(data) > self.MAX_SIZE_BYTES:
+            return False, f"File exceeds maximum size of {self.MAX_SIZE_BYTES // (1024 * 1024)}MB"
+
+        return True, None
 
 
 server = http.server.HTTPServer(('localhost', 8000), Handler)
