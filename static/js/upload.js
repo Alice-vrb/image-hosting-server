@@ -66,12 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const result = await response.json();
 
-            storedFiles.push({ name: result.name, url: result.url });
+            result.files.forEach(f => {
+                storedFiles.push({ name: f.name, url: f.url });
+            });
             localStorage.setItem('uploadedImages', JSON.stringify(storedFiles));
             updateTabStyles();
 
-            if (currentUploadInput) {
-                currentUploadInput.value = result.url;
+            if (currentUploadInput && result.files.length > 0) {
+                currentUploadInput.value = result.files[result.files.length - 1].url;
             }
             alert("Files selected successfully! Go to the 'Images' tab to view them.");
 

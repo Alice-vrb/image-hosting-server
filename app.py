@@ -35,37 +35,46 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
-
     def do_POST(self):
         if self.path == '/upload':
-            data, upload_name = self.extract_file_data()
+            files = self.extract_files_data()
 
-            is_valid, error_message = self.validate_file(data, upload_name)
-            if not is_valid:
-                response = json.dumps({'error': error_message}).encode()
+            results = []
+            errors = []
+
+            for data, upload_name in files:
+                is_valid, error_message = self.validate_file(data, upload_name)
+                if not is_valid:
+                    errors.append({'file': upload_name, 'error': error_message})
+                    continue
+
+                filename = f"{uuid.uuid4().hex}.{upload_name.split('.')[-1]}"
+                os.makedirs('images', exist_ok=True)
+
+                with open(f"images/{filename}", 'wb') as file:
+                    file.write(data)
+
+                results.append({
+                    'name': filename,
+                    'url': f'http://localhost:8000/images/{filename}'
+                })
+
+            if not results:
                 self.send_response(400)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(response)
+
+                self.wfile.write(json.dumps({'errors': errors}).encode())
                 return
 
-            filename = f"{uuid.uuid4().hex}.{upload_name.split('.')[-1]}"
-
-            os.makedirs(os.path.dirname(f"images/{filename}"), exist_ok=True)
-
-            with open(f"images/{filename}", 'wb') as file:
-                file.write(data)
-
-            response = json.dumps({
-                'name': filename,
-                'url': f'http://localhost:8000/images/{filename}'
-            }).encode()
+            response = json.dumps({'files': results, 'errors': errors}).encode()
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
 
             self.wfile.write(response)
+
         else:
             self.send_response(404)
             self.end_headers()
@@ -115,20 +124,31 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         return content_type, file_path
 
-    def extract_file_data(self):
+    def extract_files_data(self):
         length = int(self.headers.get("Content-Length"))
         body = self.rfile.read(length)
         boundary = self.headers["Content-Type"].split("boundary=")[-1].encode()
-        start = body.find(b"\r\n\r\n") + 4
-        end = body.find(b"\r\n--" + boundary, start)
-        data = body[start:end]
 
-        upload_name = re.search(
-            rb'filename="([^"]+)"',
-            body
-        ).group(1).decode()
+        parts = body.split(b"--" + boundary)
 
-        return data, upload_name
+        files = []
+        for part in parts:
+            if b'filename="' not in part:
+                continue
+
+            filename_match = re.search(rb'filename="([^"]+)"', part)
+            if not filename_match:
+                continue
+            upload_name = filename_match.group(1).decode()
+
+            start = part.find(b"\r\n\r\n") + 4
+            end = part.rfind(b"\r\n")
+            data = part[start:end]
+
+            files.append((data, upload_name))
+
+        return files
+
 
     ALLOWED_EXTENSIONS = ('jpg', 'jpeg', 'png', 'gif')
     MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
