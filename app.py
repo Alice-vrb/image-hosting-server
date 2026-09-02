@@ -165,6 +165,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
         return True, None
 
 
-server = http.server.HTTPServer(('localhost', 8000), Handler)
+server = http.server.ThreadingHTTPServer(('localhost', 8000), Handler)
 if __name__ == '__main__':
     server.serve_forever()
