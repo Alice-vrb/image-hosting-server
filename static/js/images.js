@@ -72,12 +72,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const addDeleteListeners = () => {
         document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', (event) => {
+            button.addEventListener('click', async (event) => {
                 const indexToDelete = parseInt(event.currentTarget.dataset.index);
                 let storedFiles = JSON.parse(localStorage.getItem('uploadedImages')) || [];
-                storedFiles.splice(indexToDelete, 1);
-                localStorage.setItem('uploadedImages', JSON.stringify(storedFiles));
-                displayFiles();
+                const fileToDelete = storedFiles[indexToDelete];
+
+                if (!fileToDelete) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/images', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ filename: fileToDelete.name })
+                    });
+
+                    if (!response.ok) {
+                        console.error('Delete failed:', response.status);
+                        return;
+                    }
+
+                    storedFiles.splice(indexToDelete, 1);
+                    localStorage.setItem('uploadedImages', JSON.stringify(storedFiles));
+                    displayFiles();
+
+                } catch (error) {
+                    console.error('Delete error:', error);
+                }
             });
         });
     };

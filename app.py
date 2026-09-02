@@ -61,6 +61,38 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
 
 
+    def do_DELETE(self):
+        if self.path == '/images':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+
+            try:
+                data = json.loads(body)
+                filename = data.get('filename')
+            except json.JSONDecodeError:
+                self.send_response(400)
+                self.end_headers()
+                return
+
+            if not filename:
+                self.send_response(400)
+                self.end_headers()
+                return
+
+            file_path = f'images/{filename}'
+
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                self.send_response(200)
+                self.end_headers()
+            else:
+                self.send_response(404)
+                self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+
     def get_static_info(self): # -> content-type, file path
         if self.path.endswith(".css"):
             content_type = "text/css"
