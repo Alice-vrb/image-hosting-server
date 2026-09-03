@@ -1,2 +1,30 @@
 services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - images:/app/images
+      - ./logs:/app/logs
+    networks:
+      - webnet
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - images:/images
+    depends_on:
+      - app
+    networks:
+      - webnet
+
+volumes:
+  images:
+
+networks:
+  webnet:
   
