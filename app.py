@@ -70,7 +70,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
                 results.append({
                     'name': filename,
-                    'url': f'http://localhost:8000/images/{filename}'
+                    'url': f'http://localhost:8080/images/{filename}'
                 })
 
                 logger.info(f"Success: image {filename} uploaded.")
