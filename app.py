@@ -1,8 +1,20 @@
 import http.server
 import json
+import logging
 import os
 import re
 import uuid
+
+
+os.makedirs('logs', exist_ok=True)
+
+logging.basicConfig(
+    filename='logs/app.log',
+    level=logging.INFO,
+    format='[%(asctime)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -34,6 +46,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
+            logger.error(f"Error: path {self.path} not found.")
 
     def do_POST(self):
         if self.path == '/upload':
@@ -46,6 +59,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 is_valid, error_message = self.validate_file(data, upload_name)
                 if not is_valid:
                     errors.append({'file': upload_name, 'error': error_message})
+                    logger.error(f"Error: {error_message} ({upload_name}).")
                     continue
 
                 filename = f"{uuid.uuid4().hex}.{upload_name.split('.')[-1]}"
@@ -59,11 +73,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     'url': f'http://localhost:8000/images/{filename}'
                 })
 
+                logger.info(f"Success: image {filename} uploaded.")
+
             if not results:
                 self.send_response(400)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
 
+                logger.error(f"Error: no files passed validation ({len(errors)} rejected).")
                 self.wfile.write(json.dumps({'errors': errors}).encode())
                 return
 
@@ -78,6 +95,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
+            logger.error(f"Error: unsupported path {self.path} for POST request.")
 
 
     def do_DELETE(self):
@@ -91,11 +109,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             except json.JSONDecodeError:
                 self.send_response(400)
                 self.end_headers()
+                logger.error("Error: invalid JSON in DELETE request.")
                 return
 
             if not filename:
                 self.send_response(400)
                 self.end_headers()
+                logger.error("Error: DELETE request missing 'filename' field.")
                 return
 
             file_path = f'images/{filename}'
@@ -104,12 +124,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 os.remove(file_path)
                 self.send_response(200)
                 self.end_headers()
+                logger.info(f"Success: image {filename} deleted.")
             else:
                 self.send_response(404)
                 self.end_headers()
+                logger.error(f"Error: file {filename} not found for DELETE request.")
         else:
             self.send_response(404)
             self.end_headers()
+            logger.error(f"Error: unsupported path {self.path} for DELETE request.")
 
 
     def get_static_info(self): # -> content-type, file path
