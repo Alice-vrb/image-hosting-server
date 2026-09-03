@@ -8,7 +8,6 @@
 # Docker configs
 docker-compose.yaml
 compose.yaml
-nginx.conf
 Dockerfile
 .dockerignore
 
