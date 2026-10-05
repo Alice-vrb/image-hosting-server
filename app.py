@@ -55,21 +55,21 @@ class Handler(http.server.BaseHTTPRequestHandler):
             results = []
             errors = []
 
-            for data, upload_name in files:
-                is_valid, error_message = self.validate_file(data, upload_name)
+            for data, original_name in files:
+                is_valid, error_message = self.validate_file(data, original_name)
                 if not is_valid:
-                    errors.append({'file': upload_name, 'error': error_message})
-                    logger.error(f"Error: {error_message} ({upload_name}).")
+                    errors.append({'file': original_name, 'error': error_message})
+                    logger.error(f"Error: {error_message} ({original_name}).")
                     continue
 
-                filename = f"{uuid.uuid4().hex}.{upload_name.split('.')[-1]}"
+                filename = f"{uuid.uuid4().hex}.{original_name.split('.')[-1]}"
                 os.makedirs('images', exist_ok=True)
 
                 with open(f"images/{filename}", 'wb') as file:
                     file.write(data)
 
                 results.append({
-                    'name': filename,
+                    'filename': filename,
                     'url': f'http://localhost:8080/images/{filename}'
                 })
 
@@ -162,13 +162,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             filename_match = re.search(rb'filename="([^"]+)"', part)
             if not filename_match:
                 continue
-            upload_name = filename_match.group(1).decode()
+            original_name = filename_match.group(1).decode()
 
             start = part.find(b"\r\n\r\n") + 4
             end = part.rfind(b"\r\n")
             data = part[start:end]
 
-            files.append((data, upload_name))
+            files.append((data, original_name))
 
         return files
 
@@ -176,8 +176,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
     ALLOWED_EXTENSIONS = ('jpg', 'jpeg', 'png', 'gif')
     MAX_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
 
-    def validate_file(self, data, filename):
-        extension = filename.split('.')[-1].lower() if '.' in filename else ''
+    def validate_file(self, data, original_name):
+        extension = original_name.split('.')[-1].lower() if '.' in original_name else ''
 
         if extension not in self.ALLOWED_EXTENSIONS:
             return False, f"Invalid file extension: .{extension}"

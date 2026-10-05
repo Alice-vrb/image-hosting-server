@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fileItem.innerHTML = `
                     <div class="file-col file-col-name">
                         <span class="file-icon"><img src="../static/img/icon/Group.png" alt="file icon"></span>
-                        <span class="file-name">${fileData.name}</span>
+                        <span class="file-name">${fileData.filename}</span>
                     </div>
                     <div class="file-col file-col-url">
                         <a href="${fileData.url}" target="_blank">${fileData.url}</a>
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ filename: fileToDelete.name })
+                        body: JSON.stringify({ filename: fileToDelete.filename })
                     });
 
                     if (!response.ok) {

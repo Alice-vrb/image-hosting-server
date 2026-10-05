@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileNames = [];
 
         for (const file of files) {
-            fileNames.push(file.name);
+            fileNames.push(file.filename);
             formData.append('files', file);
 
             filesAdded = true;
@@ -66,8 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const result = await response.json();
 
-            result.files.forEach(f => {
-                storedFiles.push({ name: f.name, url: f.url });
+            result.files.forEach(file => {
+                storedFiles.push({ filename: file.filename, url: file.url });
             });
             localStorage.setItem('uploadedImages', JSON.stringify(storedFiles));
             updateTabStyles();
