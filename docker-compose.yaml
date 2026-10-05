@@ -4,7 +4,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - images:/app/images
+      - ./images:/app/images
       - ./logs:/app/logs
     networks:
       - webnet
@@ -16,14 +16,11 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - images:/images
+      - ./images:/images
     depends_on:
       - app
     networks:
       - webnet
-
-volumes:
-  images:
 
 networks:
   webnet:
