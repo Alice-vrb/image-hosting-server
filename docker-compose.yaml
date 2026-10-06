@@ -22,6 +22,15 @@ services:
     networks:
       - webnet
 
+  db:
+    image: postgres:18-alpine
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: example
+      POSTGRES_USER: example
+
 networks:
   webnet:
   
