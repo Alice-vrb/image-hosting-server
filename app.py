@@ -1,7 +1,9 @@
+from dotenv import load_dotenv
 import http.server
 import json
 import logging
 import os
+import psycopg
 import re
 import uuid
 
@@ -15,6 +17,32 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
+
+
+load_dotenv()
+
+def get_connection():
+    return psycopg.connect(
+        password=os.getenv("POSTGRES_PASSWORD"),
+        dbname=os.getenv("POSTGRES_DB"),
+        user=os.getenv("POSTGRES_USER"),
+        port=os.getenv("DB_PORT"),
+        host=os.getenv("DB_HOST"),
+        connect_timeout=5
+    )
+
+
+def insert_image_metadata(filename: str, original_name: str, size: int, file_type: str):
+    query = """
+        INSERT INTO images (filename, original_name, size, file_type)
+        VALUES (%s, %s, %s, %s)
+        RETURNING id;
+        """
+
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query, (filename, original_name, size, file_type))
+            return cursor.fetchone()[0]
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -68,12 +96,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 with open(f"images/{filename}", 'wb') as file:
                     file.write(data)
 
+                file_type = original_name.split('.')[-1].lower()
+
+                try:
+                    image_id = insert_image_metadata(filename, original_name, len(data), file_type)
+                except psycopg.Error as e:
+                    os.remove(f"images/{filename}")
+                    errors.append({'file': original_name, 'error': 'Database error'})
+                    logger.error(f"Error: database error: {e} ({original_name}).")
+                    continue
+
                 results.append({
                     'filename': filename,
                     'url': f'http://localhost:8080/images/{filename}'
                 })
 
-                logger.info(f"Success: image {filename} uploaded.")
+                logger.info(f"Success: image {filename} uploaded. Inserted into db with id {image_id}")
 
             if not results:
                 self.send_response(400)
