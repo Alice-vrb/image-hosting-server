@@ -45,6 +45,20 @@ def insert_image_metadata(filename: str, original_name: str, size: int, file_typ
             return cursor.fetchone()[0]
 
 
+def delete_image_metadata(filename:str):
+    query = """
+        DELETE FROM images
+        WHERE filename = %s
+        RETURNING id;
+        """
+
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query, (filename,))
+            image_id = cursor.fetchone()
+            return image_id[0] if image_id else None
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         paths = {
@@ -158,15 +172,29 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             file_path = f'images/{filename}'
 
-            if os.path.isfile(file_path):
-                os.remove(file_path)
-                self.send_response(200)
+            try:
+                deleted_id = delete_image_metadata(filename)
+            except psycopg.Error as e:
+                self.send_response(500)
                 self.end_headers()
-                logger.info(f"Success: image {filename} deleted.")
-            else:
+                logger.error(f"Error: database error while deleting {filename}: {e}")
+                return
+
+            if deleted_id is None:
                 self.send_response(404)
                 self.end_headers()
-                logger.error(f"Error: file {filename} not found for DELETE request.")
+                logger.error(f"Error: image {filename} not found in database.")
+                return
+
+            try:
+                os.remove(file_path)
+                logger.info(f"Success: image {filename} deleted (id {deleted_id}).")
+            except OSError as e:
+                logger.error(f"Error: record {deleted_id} deleted, but file {filename} was not removed: {e}")
+
+            self.send_response(200)
+            self.end_headers()
+
         else:
             self.send_response(404)
             self.end_headers()
