@@ -32,6 +32,19 @@ def get_connection():
     )
 
 
+def get_images_metadata():
+    query = """
+        SELECT filename, original_name, size, upload_time, file_type
+        FROM images
+        ORDER BY upload_time DESC;
+        """
+
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            return cursor.fetchall()
+
+
 def insert_image_metadata(filename: str, original_name: str, size: int, file_type: str):
     query = """
         INSERT INTO images (filename, original_name, size, file_type)
