@@ -36,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!files || files.length === 0) {
             return;
         }
-        const storedFiles = JSON.parse(localStorage.getItem('uploadedImages')) || [];
         let filesAdded = false;
 
         const formData = new FormData();
@@ -65,11 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const result = await response.json();
-
-            result.files.forEach(file => {
-                storedFiles.push({ filename: file.filename, url: file.url });
-            });
-            localStorage.setItem('uploadedImages', JSON.stringify(storedFiles));
             updateTabStyles();
 
             if (currentUploadInput && result.files.length > 0) {
@@ -101,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (imagesButton) {
         imagesButton.addEventListener('click', () => {
-            window.location.href = './images';
+            window.location.href = './images-list';
         });
     }
 

@@ -321,3 +321,28 @@ body {
     opacity: 0.7;
     /* Make the icon semi-transparent for user feedback */
 }
+
+.images-table-wrapper {
+    max-width: 960px;
+    margin: 32px auto;
+    padding: 0 16px;
+    overflow-x: auto;
+}
+
+.images-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.images-table th {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #555555;
+    color: #0060ff;
+}
+.images-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #555555;
+    color: black;
+}

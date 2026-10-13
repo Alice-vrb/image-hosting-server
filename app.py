@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+import html
 import http.server
 import json
 import logging
@@ -77,7 +78,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
         paths = {
             '/': 'index.html',
             '/upload': 'upload.html',
-            '/images': 'images.html',
         }
 
         if self.path in paths:
@@ -87,6 +87,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             with open(f"templates/{paths[self.path]}", 'r') as file:
                 self.wfile.write(file.read().encode())
+
+        elif self.path == '/images-list':
+            self.send_images_list()
 
         elif self.path.startswith('/static/'):
             content_type, file_path = self.get_static_info()
@@ -265,6 +268,48 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return False, f"File exceeds maximum size of {self.MAX_SIZE_BYTES // (1024 * 1024)}MB"
 
         return True, None
+
+
+    def send_images_list(self):
+        try:
+            images = get_images_metadata()
+        except psycopg.Error as e:
+            self.send_response(500)
+            self.end_headers()
+            logger.error(f"Error: database error while listing images: {e}")
+            return
+
+        if images:
+            rows = ""
+            for filename, original_name, size, upload_time, file_type in images:
+                rows += f"""
+                    <tr>
+                        <td><a href="http://localhost:8080/images/{html.escape(filename)}" target="_blank">{html.escape(filename)}</a></td>
+                        <td>{html.escape(original_name)}</td>
+                        <td>{size / 1024:.1f}</td>
+                        <td>{upload_time:%Y-%m-%d %H:%M:%S}</td>
+                        <td>{html.escape(file_type)}</td>
+                    </tr>"""
+            content = f"""
+                <table class="images-table">
+                    <thead>
+                        <tr>
+                            <th>Filename</th><th>Original name</th>
+                            <th>Size (KB)</th><th>Upload time</th><th>File type</th>
+                        </tr>
+                    </thead>
+                    <tbody>{rows}</tbody>
+                </table>"""
+        else:
+            content = '<p class="upload__promt">No images uploaded yet.</p>'
+
+        with open("templates/images-list.html", "r") as file:
+            page = file.read().replace("{{content}}", content)
+
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html; charset=utf-8')
+        self.end_headers()
+        self.wfile.write(page.encode())
 
 
 server = http.server.ThreadingHTTPServer(('0.0.0.0', 8000), Handler)
