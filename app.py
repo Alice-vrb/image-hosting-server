@@ -3,9 +3,11 @@ import html
 import http.server
 import json
 import logging
+import math
 import os
 import psycopg
 import re
+from urllib.parse import urlparse, parse_qs
 import uuid
 
 
@@ -33,17 +35,27 @@ def get_connection():
     )
 
 
-def get_images_metadata():
+PAGE_SIZE = 10
+
+def get_images_metadata(page: int):
+    count_query = "SELECT COUNT(*) FROM images;"
     query = """
         SELECT filename, original_name, size, upload_time, file_type
         FROM images
-        ORDER BY upload_time DESC;
+        ORDER BY upload_time DESC
+        LIMIT %s OFFSET %s;
         """
 
     with get_connection() as connection:
         with connection.cursor() as cursor:
-            cursor.execute(query)
-            return cursor.fetchall()
+            cursor.execute(count_query)
+            total_rows = cursor.fetchone()[0]
+
+            total_pages = max(1, math.ceil(total_rows / PAGE_SIZE))
+            page = min(max(page, 1), total_pages)
+
+            cursor.execute(query, (PAGE_SIZE, (page - 1) * PAGE_SIZE))
+            return cursor.fetchall(), page, total_pages
 
 
 def insert_image_metadata(filename: str, original_name: str, size: int, file_type: str):
@@ -88,7 +100,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with open(f"templates/{paths[self.path]}", 'r') as file:
                 self.wfile.write(file.read().encode())
 
-        elif self.path == '/images-list':
+        elif urlparse(self.path).path == '/images-list':
             self.send_images_list()
 
         elif self.path.startswith('/static/'):
@@ -271,8 +283,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
     def send_images_list(self):
+        query = parse_qs(urlparse(self.path).query)
         try:
-            images = get_images_metadata()
+            page = int(query.get('page', ['1'])[0])
+        except ValueError:
+            page = 1
+
+        try:
+            images, page, total_pages = get_images_metadata(page)
         except psycopg.Error as e:
             self.send_response(500)
             self.end_headers()
@@ -300,6 +318,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     </thead>
                     <tbody>{rows}</tbody>
                 </table>"""
+            prev_btn = (
+                f'<a class="pagination__btn" href="/images-list?page={page - 1}">Previous page</a>'
+                if page > 1 else
+                '<span class="pagination__btn pagination__btn--disabled">Previous page</span>'
+            )
+            next_btn = (
+                f'<a class="pagination__btn" href="/images-list?page={page + 1}">Next page</a>'
+                if page < total_pages else
+                '<span class="pagination__btn pagination__btn--disabled">Next page</span>'
+            )
+            content += f"""
+                <nav class="pagination">
+                    {prev_btn}
+                    <span>Page {page}/{total_pages}</span>
+                    {next_btn}
+                </nav>"""
         else:
             content = '<p class="upload__promt">No images uploaded yet.</p>'
 
