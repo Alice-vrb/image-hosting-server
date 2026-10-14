@@ -36,20 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!files || files.length === 0) {
             return;
         }
-        let filesAdded = false;
 
         const formData = new FormData();
 
-        const fileNames = [];
-
         for (const file of files) {
-            fileNames.push(file.filename);
             formData.append('files', file);
-
-            filesAdded = true;
         }
-        formData.append('names', JSON.stringify(fileNames));
-        console.log('Names JSON:', formData);
         try {
             const response = await fetch('/upload', {
                 method: 'POST',
