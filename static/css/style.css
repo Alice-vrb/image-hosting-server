@@ -370,3 +370,14 @@ body {
     opacity: 0.4;
     cursor: not-allowed;
 }
+
+.images-table th,
+.images-table td {
+    overflow-wrap: anywhere;
+}
+
+.images-table th:last-child,
+.images-table td:last-child {
+    width: 1%;
+    white-space: nowrap;
+}

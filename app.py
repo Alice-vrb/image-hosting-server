@@ -40,7 +40,7 @@ PAGE_SIZE = 10
 def get_images_metadata(page: int):
     count_query = "SELECT COUNT(*) FROM images;"
     query = """
-        SELECT filename, original_name, size, upload_time, file_type
+        SELECT id, filename, original_name, size, upload_time, file_type
         FROM images
         ORDER BY upload_time DESC
         LIMIT %s OFFSET %s;
@@ -71,18 +71,18 @@ def insert_image_metadata(filename: str, original_name: str, size: int, file_typ
             return cursor.fetchone()[0]
 
 
-def delete_image_metadata(filename:str):
+def delete_image_metadata(image_id:int):
     query = """
         DELETE FROM images
-        WHERE filename = %s
-        RETURNING id;
+        WHERE id = %s
+        RETURNING filename;
         """
 
     with get_connection() as connection:
         with connection.cursor() as cursor:
-            cursor.execute(query, (filename,))
-            image_id = cursor.fetchone()
-            return image_id[0] if image_id else None
+            cursor.execute(query, (image_id,))
+            row = cursor.fetchone()
+            return row[0] if row else None
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -172,61 +172,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             self.wfile.write(response)
 
+        elif self.path.startswith('/delete/'):
+            self.handle_delete()
+
         else:
             self.send_response(404)
             self.end_headers()
             logger.error(f"Error: unsupported path {self.path} for POST request.")
-
-
-    def do_DELETE(self):
-        if self.path == '/images':
-            content_length = int(self.headers.get('Content-Length', 0))
-            body = self.rfile.read(content_length)
-
-            try:
-                data = json.loads(body)
-                filename = data.get('filename')
-            except json.JSONDecodeError:
-                self.send_response(400)
-                self.end_headers()
-                logger.error("Error: invalid JSON in DELETE request.")
-                return
-
-            if not filename:
-                self.send_response(400)
-                self.end_headers()
-                logger.error("Error: DELETE request missing 'filename' field.")
-                return
-
-            file_path = f'images/{filename}'
-
-            try:
-                deleted_id = delete_image_metadata(filename)
-            except psycopg.Error as e:
-                self.send_response(500)
-                self.end_headers()
-                logger.error(f"Error: database error while deleting {filename}: {e}")
-                return
-
-            if deleted_id is None:
-                self.send_response(404)
-                self.end_headers()
-                logger.error(f"Error: image {filename} not found in database.")
-                return
-
-            try:
-                os.remove(file_path)
-                logger.info(f"Success: image {filename} deleted (id {deleted_id}).")
-            except OSError as e:
-                logger.error(f"Error: record {deleted_id} deleted, but file {filename} was not removed: {e}")
-
-            self.send_response(200)
-            self.end_headers()
-
-        else:
-            self.send_response(404)
-            self.end_headers()
-            logger.error(f"Error: unsupported path {self.path} for DELETE request.")
 
 
     def get_static_info(self): # -> content-type, file path
@@ -299,7 +251,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
         if images:
             rows = ""
-            for filename, original_name, size, upload_time, file_type in images:
+            for image_id, filename, original_name, size, upload_time, file_type in images:
                 rows += f"""
                     <tr>
                         <td><a href="http://localhost:8080/images/{html.escape(filename)}" target="_blank">{html.escape(filename)}</a></td>
@@ -307,13 +259,21 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         <td>{size / 1024:.1f}</td>
                         <td>{upload_time:%Y-%m-%d %H:%M:%S}</td>
                         <td>{html.escape(file_type)}</td>
+                        <td>
+                            <form method="post" action="/delete/{image_id}" class="delete-form">
+                                <button type="submit" class="delete-btn" title="Delete" aria-label="Delete">
+                                    <img class="delete-img" src="/static/img/icon/delete.png" alt="">
+                                </button>
+                            </form>
+                        </td>
                     </tr>"""
             content = f"""
                 <table class="images-table">
                     <thead>
                         <tr>
                             <th>Filename</th><th>Original name</th>
-                            <th>Size (KB)</th><th>Upload time</th><th>File type</th>
+                            <th>Size (KB)</th><th>Upload time</th>
+                            <th>File type</th><th>Deletee</th>
                         </tr>
                     </thead>
                     <tbody>{rows}</tbody>
@@ -344,6 +304,42 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html; charset=utf-8')
         self.end_headers()
         self.wfile.write(page.encode())
+
+
+    def handle_delete(self):
+        try:
+            image_id = int(self.path.split('/')[-1])
+        except ValueError:
+            self.send_response(400)
+            self.end_headers()
+            logger.error(f"Error: invalid image id in {self.path}.")
+            return
+
+        try:
+            filename = delete_image_metadata(image_id)
+        except psycopg.Error as e:
+            self.send_response(500)
+            self.end_headers()
+            logger.error(f"Error: database error while deleting image id {image_id}: {e}")
+            return
+
+        if filename is None:
+            self.send_response(404)
+            self.send_header('Content-type', 'text/plain; charset=utf-8')
+            self.end_headers()
+            self.wfile.write("Image not found".encode())
+            logger.error(f"Error: image id {image_id} not found in database.")
+            return
+
+        try:
+            os.remove(f"images/{filename}")
+            logger.info(f"Success: image {filename} deleted (id {image_id}).")
+        except OSError as e:
+            logger.error(f"Error: record {image_id} deleted, but file {filename} was not removed: {e}")
+
+        self.send_response(303)
+        self.send_header('Location', '/images-list')
+        self.end_headers()
 
 
 server = http.server.ThreadingHTTPServer(('0.0.0.0', 8000), Handler)
