@@ -8,6 +8,7 @@ BACKUP_DIR="backups"
 LOG_FILE="logs/app.log"
 TIMESTAMP="$(date +%Y-%m-%d_%H%M%S)"
 BACKUP_FILE="${BACKUP_DIR}/backup_${TIMESTAMP}.sql"
+KEEP_DAYS=7
 
 mkdir -p "$BACKUP_DIR" logs
 
@@ -21,6 +22,7 @@ if docker exec "$CONTAINER" sh -c \
     > "$BACKUP_FILE"; then
     log "Success: database backup created: ${BACKUP_FILE}"
     echo "Backup created: ${BACKUP_FILE}"
+    find "$BACKUP_DIR" -name 'backup_*.sql' -mtime +"$KEEP_DAYS" -delete
 else
     rm -f "$BACKUP_FILE"
     log "Error: database backup failed (container: ${CONTAINER})"
