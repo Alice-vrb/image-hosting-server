@@ -19,3 +19,6 @@ logs/
 README.md
 
 .venv
+
+# Backup directory
+backups/

@@ -222,3 +222,6 @@ __marimo__/
 # Docker volumes
 images/
 logs/
+
+# Backup directory
+backups/
