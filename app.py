@@ -273,7 +273,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                         <tr>
                             <th>Filename</th><th>Original name</th>
                             <th>Size (KB)</th><th>Upload time</th>
-                            <th>File type</th><th>Deletee</th>
+                            <th>File type</th><th>Delete</th>
                         </tr>
                     </thead>
                     <tbody>{rows}</tbody>
