@@ -219,6 +219,10 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Docker volumes
-images/
-logs/
+# Docker volumes and backups
+images/*
+!images/.gitkeep
+logs/*
+!logs/.gitkeep
+backups/*
+!backups/.gitkeep

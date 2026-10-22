@@ -1,10 +1,16 @@
 services:
   app:
     build: .
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - DB_PORT=${DB_PORT}
+      - DB_HOST=${DB_HOST}
     ports:
       - "8000:8000"
     volumes:
-      - images:/app/images
+      - ./images:/app/images
       - ./logs:/app/logs
     networks:
       - webnet
@@ -16,15 +22,37 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - images:/images
+      - ./images:/images
     depends_on:
       - app
     networks:
       - webnet
 
-volumes:
-  images:
+  db:
+    image: postgres:18-alpine
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+    ports:
+      - "5432:5432"
+    container_name: postgres_container
+    volumes:
+      - db_data:/var/lib/postgresql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - webnet
 
 networks:
   webnet:
+
+volumes:
+  db_data:
   
